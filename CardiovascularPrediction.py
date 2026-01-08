@@ -51,7 +51,6 @@ st.markdown("""
 #DATA LOADING 
 @st.cache_data
 def load_data():
-    # Replace with your actual file path
     return pd.read_csv("cleaned_cardio.csv")
 
 try:
