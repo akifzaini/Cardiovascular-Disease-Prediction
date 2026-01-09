@@ -118,10 +118,10 @@ if page == "🏠 Home":
         ### Welcome to CardioGuard
         Cardiovascular diseases (CVDs) are the leading cause of death globally. Early detection and lifestyle changes are crucial for prevention.
         
-        **This intelligent system allows you to:**
+        **This system allows you to:**
         * **Analyze** historical patient data to find trends.
         * **Visualize** risk factors like Blood Pressure, BMI, and Cholesterol.
-        * **Predict** your own risk using machine learning algorithms.
+        * **Predict** your own risk using the existing dataset analysis.
         """)
     
         st.image("assets\Heart Anatomy.jpg", 
@@ -130,21 +130,11 @@ if page == "🏠 Home":
         
         st.info("Navigate using the sidebar to explore the dataset or take the health test.")
 
-    with col2:
-        st.markdown("### 📈 Quick Stats")
-        st.metric(label="Total Patients Records", value=f"{df.shape[0]:,}")
-        st.metric(label="High Risk Cases", value=f"{df['cardio'].sum():,}")
-        st.metric(label="Average Patient Age", value=f"{int(df['age_years'].mean())} years")
 
 # DATASET PAGE
 elif page == "📂 Dataset":
     st.title("📂 Dataset Overview")
     st.markdown("View the raw data used to train the machine learning models.")
-
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Rows", df.shape[0])
-    c2.metric("Columns", df.shape[1])
-    c3.metric("Missing Values", df.isna().sum().sum())
 
     st.divider()
     st.subheader("🔍 Data Preview")
