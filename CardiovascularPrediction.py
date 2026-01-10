@@ -218,11 +218,10 @@ elif page == "🧠 Model Studio":
 # PREDICTION PAGE 
 elif page == "🩺 Health Risk Test":
     st.title("🩺 Health Risk Assessment")
-    st.markdown("Enter your biological data below to get a risk result.")
-    
     st.image("assets\Cardiovascular Medical Checkup.jpg", 
              width=400, caption="Medical Checkup")
-
+    st.markdown("Enter your biological data below to get a risk result.")
+    
     # Check if model exists
     if not os.path.exists("cardio_model.pkl"):
         st.warning("⚠️ No model found! Please go to the 'Model Studio' page and train the model first.")
