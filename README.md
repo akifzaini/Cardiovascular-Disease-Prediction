@@ -3,7 +3,7 @@
 A simple streamlit application that predict the risk of cardiovascular disease based on personal health information using the existing dataset "cleaned_cardio.csv".
 This project also includes data exploration, visualization, model training, and real-time prediction in one interactive interface.
 
-📊 Dataset Source
+Dataset Source
 Cardiovascular Disease Dataset (Kaggle): https://www.kaggle.com/datasets/sulianova/cardiovascular-disease-dataset.
 
 This application allows users to:
@@ -12,20 +12,20 @@ This application allows users to:
 - Train a machine learning model (Logistic Regression)
 - Test cardiovascular disease risk using personal health inputs
 
-🚀 Features:
+Features:
 
-🏠 Home Page – Overview of the application
+Home Page – Overview of the application
 
-📂 Dataset Exploration – Preview dataset and statistical summary
+Dataset Exploration – Preview dataset and statistical summary
 
-📊 Data Analysis – Visual insights (distribution, boxplots, scatter plots)
+Data Analysis – Visual insights (distribution, boxplots, scatter plots)
 
-🧠 Model Training – Train and evaluate Logistic Regression model
+Model Training – Train and evaluate Logistic Regression model
 
-🩺 Health Risk Test – Predict CVD risk based on user input
+Health Risk Test – Predict CVD risk based on user input
 
 
-🧠 Machine Learning Model
+Machine Learning Model
 - Algorithm: Logistic Regression
 - Preprocessing: StandardScaler
 - Train/Test Split: 80% / 20%
@@ -33,7 +33,7 @@ This application allows users to:
 
 The trained model and scaler are saved using joblib for reuse in prediction.
 
-🩺 Health Risk Prediction
+Health Risk Prediction
 - Users can input their:
 - Age, gender, height, weight
 - Blood pressure values
