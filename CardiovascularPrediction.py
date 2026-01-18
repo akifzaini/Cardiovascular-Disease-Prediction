@@ -1,227 +1,227 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import joblib
-import seaborn as sns
 import matplotlib.pyplot as plt
+import seaborn as sns
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report
-import os
+from sklearn.linear_model import LogisticRegression
+import numpy as np
 
 st.set_page_config(
-    page_title="CardioGuard | Heart Health AI",
+    page_title="CVD Risk Analysis",
     page_icon="🫀",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
-st.markdown("""
-<style>
-.main { background-color: #f5f7f9; }
-.stMetric {
-    background-color: #ffffff;
-    padding: 15px;
-    border-radius: 10px;
-    box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
-}
-</style>
-""", unsafe_allow_html=True)
 
-
-#DATA LOADING 
+#DATA LOADING & CLEANING
 @st.cache_data
-def load_data():
-    try:
-        df = pd.read_csv("cleaned_cardio.csv")
-    except FileNotFoundError:
-        st.warning("⚠️ Dataset not found. Using synthetic data.")
-        np.random.seed(42)
-        rows = 1000
-        df = pd.DataFrame({
-            'age': np.random.randint(10000, 23000, rows),
-            'gender': np.random.randint(1, 3, rows),
-            'height': np.random.randint(150, 190, rows),
-            'weight': np.random.randint(50, 120, rows),
-            'ap_hi': np.random.randint(90, 180, rows),
-            'ap_lo': np.random.randint(60, 110, rows),
-            'cholesterol': np.random.randint(1, 4, rows),
-            'gluc': np.random.randint(1, 4, rows),
-            'smoke': np.random.randint(0, 2, rows),
-            'alco': np.random.randint(0, 2, rows),
-            'active': np.random.randint(0, 2, rows),
-            'cardio': np.random.randint(0, 2, rows)
-        })
-
-    df['age_years'] = (df['age'] / 365.25).round(1) if df['age'].mean() > 150 else df['age']
-
-    df['bmi'] = df['weight'] / ((df['height'] / 100) ** 2)
-    df['pulse_pressure'] = df['ap_hi'] - df['ap_lo']
-    df['mean_arterial_pressure'] = (df['ap_hi'] + 2 * df['ap_lo']) / 3
-
-    df['bmi_category'] = pd.cut(
-        df['bmi'],
-        bins=[0, 18.5, 24.9, 29.9, 100],
-        labels=['Underweight', 'Normal', 'Overweight', 'Obese']
-    )
-
-    return df
+def load_and_clean_data():
+    df = pd.read_csv("cleaned_cardio.csv")
 
 
-df = load_data()
+    mask = (df['ap_hi'] >= 60) & (df['ap_hi'] <= 240) & \
+           (df['ap_lo'] >= 40) & (df['ap_lo'] <= 160) & \
+           (df['ap_hi'] > df['ap_lo'])
+    df_clean = df[mask].copy()
 
-st.sidebar.image("https://cdn-icons-png.flaticon.com/512/2966/2966486.png", width=100)
-st.sidebar.title("CardioGuard")
-st.sidebar.markdown("---")
+    df_clean['BMI'] = df_clean['weight'] / ((df_clean['height'] / 100) ** 2)
+    df_clean['pulse_pressure'] = df_clean['ap_hi'] - df_clean['ap_lo']
 
+    return df_clean
+
+
+df = load_and_clean_data()
+
+st.sidebar.title("🫀 CVD Prediction App")
 page = st.sidebar.radio(
-    "Navigation",
-    ["🏠 Home", "📂 Dataset", "📊 Data Analysis", "🧠 Model Studio", "🩺 Health Risk Test"]
+    "Menu",
+    ["🏠 Home", "📂 Dataset", "📊 Data Analysis", "🧠 Model Training", "🩺 Health Risk Test"]
 )
 
-st.sidebar.markdown("---")
-st.sidebar.info("Educational use only. Not a medical diagnosis.")
-
+#HOME PAGE 
 if page == "🏠 Home":
     st.title("🫀 Cardiovascular Disease Risk Prediction")
     st.markdown("""
-    **CardioGuard** analyzes cardiovascular risk factors using machine learning  
-    and exploratory data analysis to support early disease detection.
+    ### Welcome!
+    This application allows you to predict your risk of cardiovascular disease using:
+    - **Random Forest Classifier**
+    - **Logistic Regression**
+
+    You can explore the dataset, perform data analysis, train models, and test your health risk.
     """)
 
-
-#DATASET
+#DATASET PAGE 
 elif page == "📂 Dataset":
     st.title("📂 Dataset Overview")
-    st.dataframe(df.head(10), use_container_width=True)
+    col1, col2 = st.columns(2)
+    col1.metric("Total Records (Cleaned)", df.shape[0])
+    col2.metric("Total Features", df.shape[1])
+
+    st.subheader("🔍 Data Preview")
+    st.dataframe(df.head())
 
     with st.expander("📊 Statistical Summary"):
         st.write(df.describe())
 
-
-#DATA ANALYSIS 
+#DATA ANALYSIS PAGE 
 elif page == "📊 Data Analysis":
     st.title("📊 Exploratory Data Analysis")
+    tab1, tab2 = st.tabs(["Distributions", "Correlations"])
 
-    col1, col2 = st.columns(2)
+    with tab1:
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("Disease Distribution")
+            fig, ax = plt.subplots()
+            sns.countplot(x='cardio', data=df, palette='Set2', ax=ax)
+            st.pyplot(fig)
 
-    with col1:
-        fig, ax = plt.subplots()
-        sns.countplot(x='cardio', data=df, ax=ax)
-        ax.set_title("Cardiovascular Disease Distribution")
-        ax.set_xlabel("Cardio (0 = No, 1 = Yes)")
+        with col2:
+            st.subheader("Pulse Pressure by Disease")
+            fig, ax = plt.subplots()
+            sns.boxplot(x='cardio', y='pulse_pressure', data=df, ax=ax)
+            st.pyplot(fig)
+
+    with tab2:
+        st.subheader("Feature Correlation Heatmap")
+        fig, ax = plt.subplots(figsize=(10, 8))
+        sns.heatmap(df.corr(), annot=True, fmt=".2f", cmap="coolwarm", ax=ax)
         st.pyplot(fig)
 
-    with col2:
-        fig, ax = plt.subplots()
-        sns.boxplot(x='cardio', y='pulse_pressure', data=df, ax=ax)
-        ax.set_title("Pulse Pressure vs Cardiovascular Disease")
-        ax.set_ylabel("Pulse Pressure (mmHg)")
-        st.pyplot(fig)
+#MODEL TRAINING PAGE
+elif page == "🧠 Model Training":
+    st.title("🧠 Model Training")
 
-    st.subheader("BMI Distribution by Disease Status")
-    fig, ax = plt.subplots(figsize=(8, 5))
-    sns.violinplot(x='cardio', y='bmi', data=df, inner="quartile", ax=ax)
-    ax.set_xlabel("Cardio (0 = No, 1 = Yes)")
-    ax.set_ylabel("BMI")
-    st.pyplot(fig)
-
-    st.subheader("Feature Correlation Heatmap")
-    corr_features = [
-        'age_years', 'bmi', 'ap_hi', 'ap_lo',
-        'pulse_pressure', 'mean_arterial_pressure',
-        'cholesterol', 'gluc', 'active', 'cardio'
-    ]
-
-    fig, ax = plt.subplots(figsize=(10, 8))
-    sns.heatmap(
-        df[corr_features].corr(),
-        annot=True,
-        fmt=".2f",
-        cmap="coolwarm",
-        linewidths=0.5,
-        ax=ax
-    )
-    st.pyplot(fig)
-
-
-# MODEL STUDIO 
-elif page == "🧠 Model Studio":
-    st.title("🧠 Model Studio")
-
-    X = df.drop(['cardio', 'bmi_category'], axis=1)
+    drop_cols = ['cardio', 'id'] if 'id' in df.columns else ['cardio']
+    X = df.drop(drop_cols, axis=1)
     y = df['cardio']
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
-    )
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
     model_choice = st.selectbox("Select Model", ["Random Forest", "Logistic Regression"])
 
+    if model_choice == "Random Forest":
+        st.subheader("Random Forest Parameters")
+        n_trees = st.slider("Number of Trees", 10, 200, 100)
+        max_depth = st.slider("Max Depth", 5, 30, 10)
+        min_samples_split = st.slider("Min Samples Split", 2, 10, 2)
+        min_samples_leaf = st.slider("Min Samples Leaf", 1, 5, 1)
+
+    elif model_choice == "Logistic Regression":
+        st.subheader("Logistic Regression Parameters")
+        solver = st.selectbox("Solver", ["lbfgs", "liblinear", "saga"])
+        max_iter = st.slider("Max Iterations", 100, 1000, 500)
+
     if st.button("🚀 Train Model"):
-        scaler = StandardScaler()
-        X_train_scaled = scaler.fit_transform(X_train)
-        X_test_scaled = scaler.transform(X_test)
-
         if model_choice == "Random Forest":
-            model = RandomForestClassifier(n_estimators=100, random_state=42)
+            model = RandomForestClassifier(
+                n_estimators=n_trees,
+                max_depth=max_depth,
+                min_samples_split=min_samples_split,
+                min_samples_leaf=min_samples_leaf,
+                random_state=42,
+                class_weight='balanced'
+            )
         else:
-            model = LogisticRegression(max_iter=500)
+            model = LogisticRegression(
+                solver=solver,
+                max_iter=max_iter,
+                class_weight='balanced'
+            )
 
-        model.fit(X_train_scaled, y_train)
-        y_pred = model.predict(X_test_scaled)
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+        acc = accuracy_score(y_test, y_pred)
+        st.success(f"✅ Model Accuracy: {acc:.4f}")
 
-        st.success(f"Accuracy: {accuracy_score(y_test, y_pred):.4f}")
+        st.subheader("Classification Report")
         st.text(classification_report(y_test, y_pred))
 
-        joblib.dump(model, "cardio_model.pkl")
-        joblib.dump(scaler, "scaler.pkl")
+        if model_choice == "Random Forest":
+            st.subheader("📈 Feature Importance")
+            feat_imp = pd.DataFrame({'Feature': X.columns, 'Importance': model.feature_importances_})
+            feat_imp = feat_imp.sort_values(by='Importance', ascending=False)
 
-        st.subheader("🧠 Model Insight")
-        st.markdown("""
-        - Blood pressure indicators strongly influence predictions  
-        - BMI and metabolic features increase cardiovascular risk  
-        - Lifestyle variables contribute indirectly
-        """)
+            fig, ax = plt.subplots()
+            sns.barplot(x='Importance', y='Feature', data=feat_imp, palette='viridis', ax=ax)
+            st.pyplot(fig)
+        else:
+            st.subheader("📊 Feature Coefficients")
+            coef_df = pd.DataFrame({'Feature': X.columns, 'Coefficient': model.coef_[0]})
+            coef_df['Abs_Coeff'] = coef_df['Coefficient'].abs()
+            coef_df = coef_df.sort_values(by='Abs_Coeff', ascending=False)
+            st.table(coef_df[['Feature', 'Coefficient']])
 
+        joblib.dump(model, "cvd_model.pkl")
+        joblib.dump(X.columns.tolist(), "feature_names.pkl")
+        st.info("Model saved successfully!")
 
-#PREDICTION
+#HEALTH RISK TEST PAGE 
 elif page == "🩺 Health Risk Test":
-    st.title("🩺 Health Risk Assessment")
+    st.title("🩺 Cardiovascular Health Risk Test")
 
-    if not os.path.exists("cardio_model.pkl"):
-        st.warning("⚠️ Please train a model first.")
-    else:
-        model = joblib.load("cardio_model.pkl")
-        scaler = joblib.load("scaler.pkl")
+    try:
+        model = joblib.load("cvd_model.pkl")
+        feature_names = joblib.load("feature_names.pkl")
+    except:
+        st.error("⚠️ Model not found! Please train the model in the 'Model Training' tab first.")
+        st.stop()
 
-        with st.form("risk_form"):
-            age = st.number_input("Age", 18, 100, 30)
-            gender = st.selectbox("Gender", ["Female", "Male"])
+    with st.form("prediction_form"):
+        col1, col2 = st.columns(2)
+        with col1:
+            age = st.number_input("Age (days)", value=18000)
+            gender = st.selectbox("Gender", [1, 2], help="1: Women, 2: Men")
             height = st.number_input("Height (cm)", 100, 250, 170)
             weight = st.number_input("Weight (kg)", 30, 200, 70)
-            ap_hi = st.number_input("Systolic BP", 80, 250, 120)
-            ap_lo = st.number_input("Diastolic BP", 40, 150, 80)
+            ap_hi = st.number_input("Systolic Blood Pressure", 80, 240, 120)
+            ap_lo = st.number_input("Diastolic Blood Pressure", 40, 160, 80)
 
-            submitted = st.form_submit_button("Analyze Risk")
+        with col2:
+            chol = st.selectbox("Cholesterol", [1, 2, 3])
+            gluc = st.selectbox("Glucose", [1, 2, 3])
+            smoke = st.selectbox("Smoke", [0, 1])
+            alco = st.selectbox("Alcohol", [0, 1])
+            active = st.selectbox("Active", [0, 1])
 
-        if submitted:
-            bmi = weight / ((height / 100) ** 2)
-            gender_val = 2 if gender == "Male" else 1
+        submit = st.form_submit_button("🔍 Check My Risk")
 
-            user_input = [[
-                age, gender_val, height, weight,
-                ap_hi, ap_lo, 1, 1, 0, 0, 1,
-                bmi, ap_hi - ap_lo, (ap_hi + 2 * ap_lo) / 3
-            ]]
+    if submit:
+        bmi = weight / ((height / 100) ** 2)
+        pulse_p = ap_hi - ap_lo
+        input_data = pd.DataFrame([[age, gender, height, weight, ap_hi, ap_lo,
+                                    chol, gluc, smoke, alco, active, bmi, pulse_p]],
+                                  columns=feature_names)
 
-            user_scaled = scaler.transform(user_input)
-            prediction = model.predict(user_scaled)[0]
-            probability = model.predict_proba(user_scaled)[0][1]
 
-            if prediction == 1:
-                st.error(f"High Risk Detected ({probability:.1%})")
-            else:
-                st.success(f"Low Risk Detected ({probability:.1%})")
+        prediction = model.predict(input_data)[0]
+        if hasattr(model, "predict_proba"):
+            prob = model.predict_proba(input_data)[0][1]
+        else:
+            prob = model.decision_function(input_data)[0]
+            prob = 1 / (1 + np.exp(-prob))
+
+        st.divider()
+        if prediction == 1:
+            st.error(f"⚠️ High Risk Detected! (Probability: {prob:.2%})")
+            st.write("Please consult a cardiologist for professional advice.")
+        else:
+            st.success(f"✅ Low Risk (Probability: {prob:.2%})")
+            st.write("Maintain your healthy lifestyle!")
+
+        
+        st.subheader("🧩 Feature Contributions")
+        if isinstance(model, RandomForestClassifier):
+            importances = model.feature_importances_
+            feat_df = pd.DataFrame({'Feature': feature_names, 'Importance': importances})
+            feat_df = feat_df.sort_values(by='Importance', ascending=False)
+            st.table(feat_df.head(10))
+        elif isinstance(model, LogisticRegression):
+            coefs = model.coef_[0]
+            feat_df = pd.DataFrame({'Feature': feature_names, 'Coefficient': coefs})
+            feat_df['Abs_Coeff'] = feat_df['Coefficient'].abs()
+            feat_df = feat_df.sort_values(by='Abs_Coeff', ascending=False)
+            st.table(feat_df[['Feature', 'Coefficient']].head(10))
