@@ -1,0 +1,13 @@
+# ML models
+*.pkl
+*.joblib
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Streamlit cache
+.streamlit/
+
+# Environment files
+.env
