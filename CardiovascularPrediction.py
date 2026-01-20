@@ -9,6 +9,7 @@ from sklearn.metrics import accuracy_score, classification_report
 from sklearn.linear_model import LogisticRegression
 import numpy as np
 
+# --- CONFIGURATION ---
 st.set_page_config(
     page_title="CVD Risk Analysis",
     page_icon="🫀",
@@ -16,17 +17,18 @@ st.set_page_config(
 )
 
 
-#DATA LOADING & CLEANING
+# --- DATA LOADING & CLEANING ---
 @st.cache_data
 def load_and_clean_data():
     df = pd.read_csv("cleaned_cardio.csv")
 
-
+    # Remove outliers
     mask = (df['ap_hi'] >= 60) & (df['ap_hi'] <= 240) & \
            (df['ap_lo'] >= 40) & (df['ap_lo'] <= 160) & \
            (df['ap_hi'] > df['ap_lo'])
     df_clean = df[mask].copy()
 
+    # Feature Engineering
     df_clean['BMI'] = df_clean['weight'] / ((df_clean['height'] / 100) ** 2)
     df_clean['pulse_pressure'] = df_clean['ap_hi'] - df_clean['ap_lo']
 
@@ -35,13 +37,14 @@ def load_and_clean_data():
 
 df = load_and_clean_data()
 
+# --- SIDEBAR NAV ---
 st.sidebar.title("🫀 CVD Prediction App")
 page = st.sidebar.radio(
     "Menu",
     ["🏠 Home", "📂 Dataset", "📊 Data Analysis", "🧠 Model Training", "🩺 Health Risk Test"]
 )
 
-#HOME PAGE 
+# --- 1. HOME PAGE ---
 if page == "🏠 Home":
     st.title("🫀 Cardiovascular Disease Risk Prediction")
     st.markdown("""
@@ -53,7 +56,7 @@ if page == "🏠 Home":
     You can explore the dataset, perform data analysis, train models, and test your health risk.
     """)
 
-#DATASET PAGE 
+# --- 2. DATASET PAGE ---
 elif page == "📂 Dataset":
     st.title("📂 Dataset Overview")
     col1, col2 = st.columns(2)
@@ -66,7 +69,7 @@ elif page == "📂 Dataset":
     with st.expander("📊 Statistical Summary"):
         st.write(df.describe())
 
-#DATA ANALYSIS PAGE 
+# --- 3. DATA ANALYSIS PAGE ---
 elif page == "📊 Data Analysis":
     st.title("📊 Exploratory Data Analysis")
     tab1, tab2 = st.tabs(["Distributions", "Correlations"])
@@ -91,16 +94,18 @@ elif page == "📊 Data Analysis":
         sns.heatmap(df.corr(), annot=True, fmt=".2f", cmap="coolwarm", ax=ax)
         st.pyplot(fig)
 
-#MODEL TRAINING PAGE
+# --- 4. MODEL TRAINING PAGE ---
 elif page == "🧠 Model Training":
     st.title("🧠 Model Training")
 
+    # Define Features and Target
     drop_cols = ['cardio', 'id'] if 'id' in df.columns else ['cardio']
     X = df.drop(drop_cols, axis=1)
     y = df['cardio']
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
+    # Model Selection
     model_choice = st.selectbox("Select Model", ["Random Forest", "Logistic Regression"])
 
     if model_choice == "Random Forest":
@@ -115,6 +120,7 @@ elif page == "🧠 Model Training":
         solver = st.selectbox("Solver", ["lbfgs", "liblinear", "saga"])
         max_iter = st.slider("Max Iterations", 100, 1000, 500)
 
+    # Train button
     if st.button("🚀 Train Model"):
         if model_choice == "Random Forest":
             model = RandomForestClassifier(
@@ -132,14 +138,17 @@ elif page == "🧠 Model Training":
                 class_weight='balanced'
             )
 
+        # Fit model
         model.fit(X_train, y_train)
         y_pred = model.predict(X_test)
         acc = accuracy_score(y_test, y_pred)
         st.success(f"✅ Model Accuracy: {acc:.4f}")
 
+        # Classification report
         st.subheader("Classification Report")
         st.text(classification_report(y_test, y_pred))
 
+        # Feature importance / coefficients
         if model_choice == "Random Forest":
             st.subheader("📈 Feature Importance")
             feat_imp = pd.DataFrame({'Feature': X.columns, 'Importance': model.feature_importances_})
@@ -155,14 +164,16 @@ elif page == "🧠 Model Training":
             coef_df = coef_df.sort_values(by='Abs_Coeff', ascending=False)
             st.table(coef_df[['Feature', 'Coefficient']])
 
+        # Save model and feature names
         joblib.dump(model, "cvd_model.pkl")
         joblib.dump(X.columns.tolist(), "feature_names.pkl")
         st.info("Model saved successfully!")
 
-#HEALTH RISK TEST PAGE 
+# --- 5. HEALTH RISK TEST PAGE ---
 elif page == "🩺 Health Risk Test":
     st.title("🩺 Cardiovascular Health Risk Test")
 
+    # Load the trained model
     try:
         model = joblib.load("cvd_model.pkl")
         feature_names = joblib.load("feature_names.pkl")
@@ -190,13 +201,14 @@ elif page == "🩺 Health Risk Test":
         submit = st.form_submit_button("🔍 Check My Risk")
 
     if submit:
+        # Input features
         bmi = weight / ((height / 100) ** 2)
         pulse_p = ap_hi - ap_lo
         input_data = pd.DataFrame([[age, gender, height, weight, ap_hi, ap_lo,
                                     chol, gluc, smoke, alco, active, bmi, pulse_p]],
                                   columns=feature_names)
 
-
+        # Prediction & probability
         prediction = model.predict(input_data)[0]
         if hasattr(model, "predict_proba"):
             prob = model.predict_proba(input_data)[0][1]
@@ -212,7 +224,7 @@ elif page == "🩺 Health Risk Test":
             st.success(f"✅ Low Risk (Probability: {prob:.2%})")
             st.write("Maintain your healthy lifestyle!")
 
-        
+        # Feature explanation
         st.subheader("🧩 Feature Contributions")
         if isinstance(model, RandomForestClassifier):
             importances = model.feature_importances_
