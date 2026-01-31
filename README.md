@@ -49,6 +49,5 @@ The app predicts:
 ⚠️ This application is for educational purposes only and should not replace professional medical advice.
 
 
-Type this command in your Visual Studio Code terminal to run the app
-
-*streamlit run CardiovascularPrediction.py*
+## Streamlit Application: ##
+https://cardiovascular-disease-prediction-v1.streamlit.app/
